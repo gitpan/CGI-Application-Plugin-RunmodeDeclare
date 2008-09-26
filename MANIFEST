@@ -1,0 +1,11 @@
+Build.PL
+Changes
+MANIFEST
+README
+lib/CGI/Application/Plugin/RunmodeDeclare.pm
+t/00-load.t
+t/01-use.t
+t/MyApp1.pm
+t/pod.t
+Makefile.PL
+META.yml
