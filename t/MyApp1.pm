@@ -8,6 +8,6 @@ use CGI::Application::Plugin::RunmodeDeclare;
 sub cgiapp_prerun { shift->header_type('none') }
 startmode begin { "Go" }
 errormode oops { "Oh noez!" }
-runmode start ($c:) { return $c->get_current_runmode }
+runmode other ($c:) { return $c->get_current_runmode }
 
 1;
