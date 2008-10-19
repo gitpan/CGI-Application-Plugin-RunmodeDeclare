@@ -1,158 +1,174 @@
-package  # hide from cpan
-My::DDCS;
+{ # inlined until part of Devel::Declare
+package
+  My::Devel::Declare::Context::Simple;
 
-
-# Stolen from Devel::Declare's t/method-no-semi.t
 use Devel::Declare ();
 use Scope::Guard;
+use strict;
+use warnings;
+
+sub new {
+  my $class = shift;
+  bless {@_}, $class;
+}
+
+sub init {
+  my $self = shift;
+  @{$self}{ qw(Declarator Offset) } = @_;
+  $self;
+}
+
+sub offset : lvalue { shift->{Offset}; }
+sub declarator { shift->{Declarator} }
+
+sub skip_declarator {
+  my $self = shift;
+  $self->offset += Devel::Declare::toke_move_past_token( $self->offset );
+}
+
+sub skipspace {
+  my $self = shift;
+  $self->offset += Devel::Declare::toke_skipspace( $self->offset );
+}
+
+sub strip_name {
+  my $self = shift;
+  $self->skipspace;
+  if (my $len = Devel::Declare::toke_scan_word( $self->offset, 1 )) {
+    my $linestr = Devel::Declare::get_linestr();
+    my $name = substr( $linestr, $self->offset, $len );
+    substr( $linestr, $self->offset, $len ) = '';
+    Devel::Declare::set_linestr($linestr);
+    return $name;
+  }
+  return;
+}
+
+sub strip_proto {
+  my $self = shift;
+  $self->skipspace;
+
+  my $linestr = Devel::Declare::get_linestr();
+  if (substr( $linestr, $self->offset, 1 ) eq '(') {
+    my $length = Devel::Declare::toke_scan_str( $self->offset );
+    my $proto  = Devel::Declare::get_lex_stuff();
+    Devel::Declare::clear_lex_stuff();
+    $linestr = Devel::Declare::get_linestr();
+    substr( $linestr, $self->offset, $length ) = '';
+    Devel::Declare::set_linestr($linestr);
+    return $proto;
+  }
+  return;
+}
+
+sub get_curstash_name {
+  return Devel::Declare::get_curstash_name;
+}
+
+sub shadow {
+  my $self  = shift;
+  my $pack = $self->get_curstash_name;
+  Devel::Declare::shadow_sub( $pack . '::' . $self->declarator, $_[0] );
+}
+
+sub inject_if_block {
+  my $self    = shift;
+  my $inject = shift;
+  $self->skipspace;
+  my $linestr = Devel::Declare::get_linestr;
+  if (substr( $linestr, $self->offset, 1 ) eq '{') {
+    substr( $linestr, $self->offset + 1, 0 ) = $inject;
+    Devel::Declare::set_linestr($linestr);
+  }
+}
+
+sub scope_injector_call {
+  return ' BEGIN { ' . __PACKAGE__ . '::inject_scope }; ';
+}
+
+sub inject_scope {
+  my $self = shift;
+  $^H |= 0x120000;
+  $^H{DD_METHODHANDLERS} = Scope::Guard->new(sub {
+      my $linestr = Devel::Declare::get_linestr;
+      my $offset  = Devel::Declare::get_linestr_offset;
+      substr( $linestr, $offset, 0 ) = ';';
+      Devel::Declare::set_linestr($linestr);
+  });
+}
+
+1;
+
+package
+  My::Devel::Declare::MethodInstaller::Simple;
+
+use base 'My::Devel::Declare::Context::Simple';
+
+use Devel::Declare ();
 use Sub::Name;
 use strict;
 use warnings;
 
-sub install_keyword {
-    my $class = shift;
-    my $ctx   = $class->new;
-    my %args  = @_;
-    $ctx->{install_cb} = $args{pre_install} || sub {};
-    # I don't really understand why we need to declare method
-    # in the caller's namespace.
-    {
-        no strict 'refs';
-        *{$args{into}.'::'.$args{name}}   = sub (&) {};
-    }
-    Devel::Declare->setup_for(
-        $args{into},
-        { $args{name} => { const => $ctx->mk_parser },
-        },
-    );
+sub install_methodhandler {
+  my $class = shift;
+  my %args  = @_;
+  {
+    no strict 'refs';
+    *{$args{into}.'::'.$args{name}}   = sub (&) {};
+  }
 
+  my $ctx = $class->new(%args);
+  Devel::Declare->setup_for(
+    $args{into},
+    { $args{name} => { const => sub { $ctx->parser(@_) } } }
+  );
 }
 
-sub new {
-    my $class = shift;
-    bless {
-        Declarator => undef,
-        Offset     => undef,
-    }, $class;
-}
+sub parser {
+  my $self = shift;
+  $self->init(@_);
 
-sub skip_declarator {
-    my $ctx = shift;
-    $ctx->{Offset} += Devel::Declare::toke_move_past_token($ctx->{Offset});
-}
-
-sub skipspace {
-    my $ctx = shift;
-    $ctx->{Offset} += Devel::Declare::toke_skipspace($ctx->{Offset});
-}
-
-sub strip_name {
-    my $ctx = shift;
-    $ctx->skipspace;
-    if (my $len = Devel::Declare::toke_scan_word($ctx->{Offset}, 1)) {
-        my $linestr = Devel::Declare::get_linestr();
-        my $name = substr($linestr, $ctx->{Offset}, $len);
-        substr($linestr, $ctx->{Offset}, $len) = '';
-        Devel::Declare::set_linestr($linestr);
-        return $name;
-    }
-    return;
-}
-
-sub strip_proto {
-    my $ctx = shift;
-    $ctx->skipspace;
-
-    my $linestr = Devel::Declare::get_linestr();
-    if (substr($linestr, $ctx->{Offset}, 1) eq '(') {
-        my $length = Devel::Declare::toke_scan_str($ctx->{Offset});
-        my $proto = Devel::Declare::get_lex_stuff();
-        Devel::Declare::clear_lex_stuff();
-        $linestr = Devel::Declare::get_linestr();
-        substr($linestr, $ctx->{Offset}, $length) = '';
-        Devel::Declare::set_linestr($linestr);
-        return $proto;
-    }
-    return;
-}
-
-sub get_curstash_name {
-    return Devel::Declare::get_curstash_name;
-}
-
-sub shadow {
-    my $ctx = shift;
-    my $pack = $ctx->get_curstash_name;
-    Devel::Declare::shadow_sub("${pack}::$ctx->{Declarator}", $_[0]);
-}
-
-sub inject_if_block {
-    my $ctx = shift;
-    my $inject = shift;
-    $ctx->skipspace;
-    my $linestr = Devel::Declare::get_linestr;
-    if (substr($linestr, $ctx->{Offset}, 1) eq '{') {
-        substr($linestr, $ctx->{Offset}+1, 0) = $inject;
-        Devel::Declare::set_linestr($linestr);
-    }
-}
-
-sub scope_injector_call {
-    my $ctx = shift;
-    return ' BEGIN { ' . __PACKAGE__ . '::inject_scope }; ';
+  $self->skip_declarator;
+  my $name   = $self->strip_name;
+  my $proto  = $self->strip_proto;
+  my @decl   = $self->parse_proto($proto);
+  my $inject = $self->inject_parsed_proto(@decl);
+  if (defined $name) {
+    $inject = $self->scope_injector_call() . $inject;
+  }
+  $self->inject_if_block($inject);
+  if (defined $name) {
+    my $pkg = $self->get_curstash_name;
+    $name = join( '::', $pkg, $name )
+      unless( $name =~ /::/ );
+    $self->shadow( sub (&) {
+      my $code = shift;
+      # So caller() gets the subroutine name
+      no strict 'refs';
+      *{$name} = subname $name => $code;
+    });
+  } else {
+    $self->shadow(sub (&) { shift });
+  }
 }
 
 sub parse_proto { }
-sub inject_parsed_proto { }
-sub mk_parser {
-    my $ctx = shift;
 
-    return sub {
-    @{$ctx}{qw(Declarator Offset)} = @_;
-    $ctx->skip_declarator;
-    my $name = $ctx->strip_name;
-    my $proto = $ctx->strip_proto;
-    my @decl = $ctx->parse_proto($proto);
-    my $inject = $ctx->inject_parsed_proto(@decl);
-    if (defined $name) {
-        $inject = $ctx->scope_injector_call().$inject;
-    }
-    $ctx->inject_if_block($inject);
-    if (defined $name) {
-        my $pkg = $ctx->get_curstash_name;
-        $name = join('::', $pkg, $name)
-          unless ($name =~ /::/);
-    }
-    $ctx->shadow(sub (&) {
-        no strict 'refs';
-        my $code = shift;
-        # So caller() gets the subroutine name
-        *{$name} = subname $name => $code if defined $name;
-    });
-    };
+sub inject_parsed_proto {
+  return $_[1];
 }
 
-sub inject_scope {
-    my $ctx = shift;
-    $^H |= 0x120000;
-    $^H{DD_METHODHANDLERS} = Scope::Guard->new(sub {
-        my $linestr = Devel::Declare::get_linestr;
-        my $offset = Devel::Declare::get_linestr_offset;
-        substr($linestr, $offset, 0) = ';';
-        Devel::Declare::set_linestr($linestr);
-    });
+1;
 }
-
-1; # End of My::DDCS
 
 package CGI::Application::Plugin::RunmodeDeclare;
 
 use warnings;
 use strict;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
-use base qw/My::DDCS/;
+use base 'My::Devel::Declare::MethodInstaller::Simple';
 use Data::Alias ();
 use Carp qw(croak);
 
@@ -164,22 +180,26 @@ sub import {
             runmode   => runmode   =>
             startmode => startmode =>
             errormode => errormode =>
+            invocant  => '$self' =>
             @_ );
 
-    $class->install_keyword(
+    $class->install_methodhandler(
         into         => $caller,
         name         => $remap{runmode},
         pre_install  => \&_setup_runmode,
+        invocant     => $remap{invocant},
     );
-    $class->install_keyword(
+    $class->install_methodhandler(
         into         => $caller,
         name         => $remap{startmode},
         pre_install  => \&_setup_startmode,
+        invocant     => $remap{invocant},
     );
-    $class->install_keyword(
+    $class->install_methodhandler(
         into         => $caller,
         name         => $remap{errormode},
         pre_install  => \&_setup_errormode,
+        invocant     => $remap{invocant},
     );
 }
 
@@ -198,7 +218,7 @@ sub _setup_startmode {
     my ($fullname, $code) = @_;
     no strict 'refs'; no warnings 'uninitialized';
     my ($pkg, $name) = _split($fullname);
-    croak "error mode redefined (from $REGISTRY{$pkg}{error_mode_installed})" if $REGISTRY{$pkg}{error_mode_installed};
+    croak "start mode redefined (from $REGISTRY{$pkg}{start_mode_installed})" if $REGISTRY{$pkg}{start_mode_installed};
     $pkg->add_callback( init => sub { $_[0]->run_modes([ $name ]); $_[0]->start_mode($name); } );
     $REGISTRY{$pkg}{start_mode_installed} = $fullname;
 }
@@ -215,7 +235,7 @@ sub strip_name {
     my $ctx = shift;
 
     my $name = $ctx->SUPER::strip_name;
-    $ctx->{install_cb}->($ctx->get_curstash_name . '::' . $name);
+    $ctx->{pre_install}->($ctx->get_curstash_name . '::' . $name);
 
     return $name;
 }
@@ -227,7 +247,7 @@ sub parse_proto {
 
     # Do all the signature parsing here
     my %signature;
-    $signature{invocant} = '$self';
+    $signature{invocant} = $ctx->{invocant};
     $signature{invocant} = $1 if $proto =~ s{^(\$.+):\s*}{};
 
     my @protos = split /\s*,\s*/, $proto;
@@ -281,9 +301,10 @@ sub inject_parsed_proto {
 
         # XXX is_optional is ignored
 
-        # query params
-        $rhs .= "; ${sigil}${name} = $signature->{invocant}->query->param('${name}') unless defined ${sigil}${name}";
+        # params; app first, then query
         $rhs .= "; ${sigil}${name} = $signature->{invocant}->param('${name}') unless defined ${sigil}${name}";
+        $rhs .= "; ${sigil}${name} = $signature->{invocant}->query->param('${name}') unless defined ${sigil}${name}";
+
         # Handle \@foo
         if( $sig->{is_ref_alias} ) {
             push @code, sprintf 'Data::Alias::alias(%s = %s);', $lhs, $sigil."{$rhs}";
@@ -309,7 +330,7 @@ CGI::Application::Plugin::RunmodeDeclare - Declare runmodes with keywords
 
 =head1 VERSION
 
-Version 0.02
+Version 0.03
 
 =head1 SYNOPSIS
 
@@ -358,6 +379,12 @@ This declares the run mode "foo". Notice how C<$self> is ready for use.
     runmode bar ($c:) { $c->baz }
 
 Same as above, only use C<$c> instead of C<$self>.
+
+    use CGI::Application::Plugin::RunmodeDeclare invocant => '$c';
+    runmode baz { $c->quux }
+
+Same as above, but every runmode gets C<$c> by default. You can still say C<runmode ($self:)>
+to rename the invocant.
 
 =item * With a parameter list
 
