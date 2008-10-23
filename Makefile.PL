@@ -10,9 +10,7 @@ WriteMakefile
           'PREREQ_PM' => {
                            'Test::More' => 0,
                            'CGI::Application' => '4.06',
-                           'Data::Alias' => '1.07',
-                           'Sub::Name' => '0.04',
-                           'Devel::Declare' => '0.002000'
+                           'Devel::Declare' => '0.002002'
                          }
         )
 ;

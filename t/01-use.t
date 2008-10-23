@@ -3,7 +3,7 @@ use warnings;
 
 use Test::More 'no_plan';
 
-use lib 't/';
+use lib 't/lib';
 use_ok 'MyApp1';
 
 my $app1 = MyApp1->new;

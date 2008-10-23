@@ -1,175 +1,11 @@
-{ # inlined until part of Devel::Declare
-package
-  My::Devel::Declare::Context::Simple;
-
-use Devel::Declare ();
-use Scope::Guard;
-use strict;
-use warnings;
-
-sub new {
-  my $class = shift;
-  bless {@_}, $class;
-}
-
-sub init {
-  my $self = shift;
-  @{$self}{ qw(Declarator Offset) } = @_;
-  $self;
-}
-
-sub offset : lvalue { shift->{Offset}; }
-sub declarator { shift->{Declarator} }
-
-sub skip_declarator {
-  my $self = shift;
-  $self->offset += Devel::Declare::toke_move_past_token( $self->offset );
-}
-
-sub skipspace {
-  my $self = shift;
-  $self->offset += Devel::Declare::toke_skipspace( $self->offset );
-}
-
-sub strip_name {
-  my $self = shift;
-  $self->skipspace;
-  if (my $len = Devel::Declare::toke_scan_word( $self->offset, 1 )) {
-    my $linestr = Devel::Declare::get_linestr();
-    my $name = substr( $linestr, $self->offset, $len );
-    substr( $linestr, $self->offset, $len ) = '';
-    Devel::Declare::set_linestr($linestr);
-    return $name;
-  }
-  return;
-}
-
-sub strip_proto {
-  my $self = shift;
-  $self->skipspace;
-
-  my $linestr = Devel::Declare::get_linestr();
-  if (substr( $linestr, $self->offset, 1 ) eq '(') {
-    my $length = Devel::Declare::toke_scan_str( $self->offset );
-    my $proto  = Devel::Declare::get_lex_stuff();
-    Devel::Declare::clear_lex_stuff();
-    $linestr = Devel::Declare::get_linestr();
-    substr( $linestr, $self->offset, $length ) = '';
-    Devel::Declare::set_linestr($linestr);
-    return $proto;
-  }
-  return;
-}
-
-sub get_curstash_name {
-  return Devel::Declare::get_curstash_name;
-}
-
-sub shadow {
-  my $self  = shift;
-  my $pack = $self->get_curstash_name;
-  Devel::Declare::shadow_sub( $pack . '::' . $self->declarator, $_[0] );
-}
-
-sub inject_if_block {
-  my $self    = shift;
-  my $inject = shift;
-  $self->skipspace;
-  my $linestr = Devel::Declare::get_linestr;
-  if (substr( $linestr, $self->offset, 1 ) eq '{') {
-    substr( $linestr, $self->offset + 1, 0 ) = $inject;
-    Devel::Declare::set_linestr($linestr);
-  }
-}
-
-sub scope_injector_call {
-  return ' BEGIN { ' . __PACKAGE__ . '::inject_scope }; ';
-}
-
-sub inject_scope {
-  my $self = shift;
-  $^H |= 0x120000;
-  $^H{DD_METHODHANDLERS} = Scope::Guard->new(sub {
-      my $linestr = Devel::Declare::get_linestr;
-      my $offset  = Devel::Declare::get_linestr_offset;
-      substr( $linestr, $offset, 0 ) = ';';
-      Devel::Declare::set_linestr($linestr);
-  });
-}
-
-1;
-
-package
-  My::Devel::Declare::MethodInstaller::Simple;
-
-use base 'My::Devel::Declare::Context::Simple';
-
-use Devel::Declare ();
-use Sub::Name;
-use strict;
-use warnings;
-
-sub install_methodhandler {
-  my $class = shift;
-  my %args  = @_;
-  {
-    no strict 'refs';
-    *{$args{into}.'::'.$args{name}}   = sub (&) {};
-  }
-
-  my $ctx = $class->new(%args);
-  Devel::Declare->setup_for(
-    $args{into},
-    { $args{name} => { const => sub { $ctx->parser(@_) } } }
-  );
-}
-
-sub parser {
-  my $self = shift;
-  $self->init(@_);
-
-  $self->skip_declarator;
-  my $name   = $self->strip_name;
-  my $proto  = $self->strip_proto;
-  my @decl   = $self->parse_proto($proto);
-  my $inject = $self->inject_parsed_proto(@decl);
-  if (defined $name) {
-    $inject = $self->scope_injector_call() . $inject;
-  }
-  $self->inject_if_block($inject);
-  if (defined $name) {
-    my $pkg = $self->get_curstash_name;
-    $name = join( '::', $pkg, $name )
-      unless( $name =~ /::/ );
-    $self->shadow( sub (&) {
-      my $code = shift;
-      # So caller() gets the subroutine name
-      no strict 'refs';
-      *{$name} = subname $name => $code;
-    });
-  } else {
-    $self->shadow(sub (&) { shift });
-  }
-}
-
-sub parse_proto { }
-
-sub inject_parsed_proto {
-  return $_[1];
-}
-
-1;
-}
-
 package CGI::Application::Plugin::RunmodeDeclare;
 
 use warnings;
 use strict;
 
-our $VERSION = '0.03';
+our $VERSION = '0.03_01';
 
-use base 'My::Devel::Declare::MethodInstaller::Simple';
-use Data::Alias ();
+use base 'Devel::Declare::MethodInstaller::Simple';
 use Carp qw(croak);
 
 sub import {
@@ -181,22 +17,23 @@ sub import {
             startmode => startmode =>
             errormode => errormode =>
             invocant  => '$self' =>
+            into      => $caller,
             @_ );
 
     $class->install_methodhandler(
-        into         => $caller,
+        into         => $remap{into},
         name         => $remap{runmode},
         pre_install  => \&_setup_runmode,
         invocant     => $remap{invocant},
     );
     $class->install_methodhandler(
-        into         => $caller,
+        into         => $remap{into},
         name         => $remap{startmode},
         pre_install  => \&_setup_startmode,
         invocant     => $remap{invocant},
     );
     $class->install_methodhandler(
-        into         => $caller,
+        into         => $remap{into},
         name         => $remap{errormode},
         pre_install  => \&_setup_errormode,
         invocant     => $remap{invocant},
@@ -207,7 +44,7 @@ sub import {
 my %REGISTRY;
 # per-macro setup
 sub _split {
-    my $n = shift; my ($p,$l) = $n =~ /(.*)::(.*)/; return ($p, $l);
+    my $n = shift; my ($p,$l) = $n =~ /(\w*)::(\w*)/; return ($p, $l);
 }
 sub _setup_runmode {
     my ($fullname, $code) = @_;
@@ -231,6 +68,22 @@ sub _setup_errormode {
     $REGISTRY{$pkg}{error_mode_installed} = $fullname;
 }
 
+=begin pod-coverage
+
+=over 4
+
+=item strip_name - we hook into this to install cgiapp callbacks
+
+=item parse_proto - proto parser
+
+=item inject_parsed_proto - turn it into code
+
+=back
+
+=end pod-coverage
+
+=cut
+
 sub strip_name {
     my $ctx = shift;
 
@@ -241,77 +94,39 @@ sub strip_name {
 }
 
 sub parse_proto {
-    my $ctx = shift;
+    my $self = shift;
     my ($proto) = @_;
     $proto ||= '';
 
-    # Do all the signature parsing here
-    my %signature;
-    $signature{invocant} = $ctx->{invocant};
-    $signature{invocant} = $1 if $proto =~ s{^(\$.+):\s*}{};
+    my $invocant = $self->{invocant};
+    $invocant = $1 if $proto =~ s{^(\$\w+):\s*}{};
 
-    my @protos = split /\s*,\s*/, $proto;
-    for my $idx (0..$#protos) {
-        my $sig = $signature{$idx} = {};
-        my $proto = $protos[$idx];
+    my @args = 
+        map { m{^ ([$@%])(\w+) }x ? [$1, $2] : () }
+        split /\s*,\s*/,
+        $proto
+    ;
 
-#            print STDERR "proto: $proto\n";
-
-        $sig->{proto}               = $proto;
-        $sig->{idx}                 = $idx;
-        $sig->{is_at_underscore}    = $proto eq '@_';
-        $sig->{is_ref_alias}        = $proto =~ s{^\\}{}x;
-
-        $sig->{trait}   = $1 if $proto =~ s{ \s+ is \s+ (\S+) \s* }{}x;
-        $sig->{default} = $1 if $proto =~ s{ \s* = \s* (.*) }{}x;
-
-        my($sigil, $name) = $proto =~ m{^ (.)(.*) }x;
-        $sig->{is_optional} = ($name =~ s{\?$}{} or $sig->{default});
-        $sig->{sigil}       = $sigil;
-        $sig->{name}        = $name;
-    }
-
-    # XXX At this point we could do sanity checks
-
-    return \%signature;
+    return (
+        $invocant,
+        $proto,
+        @args,
+    );
 }
 
 # Turn the parsed signature into Perl code
 sub inject_parsed_proto {
-    my $ctx = shift;
-    my $signature = shift;
+    my $self      = shift;
+    my ($invocant, $proto, @args) = @_;
 
     my @code;
-    push @code, "my $signature->{invocant} = shift;";
+    push @code, "my $invocant = shift;";
+    push @code, "my ($proto) = \@_;" if defined $proto and length $proto;
 
-    for( my $idx = 0; my $sig = $signature->{$idx}; $idx++ ) {
-        next if $sig->{is_at_underscore};
-
-        my $sigil = $sig->{sigil};
-        my $name  = $sig->{name};
-
-        # These are the defaults.
-        my $lhs = "my ${sigil}${name}";
-        my $rhs = (!$sig->{is_ref_alias} and $sig->{sigil} =~ /^[@%]$/) ? "\@_[$idx..\$#_]" : "\$_[$idx]";
-
-        # Handle a default value
-        $rhs = "\@_ > $idx ? $rhs : $sig->{default}" if defined $sig->{default};
-
-        # XXX We don't do anything with traits right now
-
-        # XXX is_optional is ignored
-
-        # params; app first, then query
-        $rhs .= "; ${sigil}${name} = $signature->{invocant}->param('${name}') unless defined ${sigil}${name}";
-        $rhs .= "; ${sigil}${name} = $signature->{invocant}->query->param('${name}') unless defined ${sigil}${name}";
-
-        # Handle \@foo
-        if( $sig->{is_ref_alias} ) {
-            push @code, sprintf 'Data::Alias::alias(%s = %s);', $lhs, $sigil."{$rhs}";
-        }
-        else {
-            push @code, "$lhs = $rhs;";
-        }
+    for my $sig (@args) {
+        my ($sigil, $name) = @$sig;
+        push @code, "${sigil}${name} = ${invocant}->param('${name}') unless defined ${sigil}${name}; ";
+        push @code, "${sigil}${name} = ${invocant}->query->param('${name}') unless defined ${sigil}${name}; ";
     }
 
     # All on one line.

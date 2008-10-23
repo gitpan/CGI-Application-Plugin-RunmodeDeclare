@@ -11,9 +11,7 @@ my $builder = Module::Build->new(
         'Test::More' => 0,
     },
     requires            => {
-        'Devel::Declare' => '0.002000',
-        'Data::Alias'    => '1.07',
-        'Sub::Name'      => '0.04',
+        'Devel::Declare' => '0.002002',
         'CGI::Application' => '4.06',
     },
     add_to_cleanup      => [ 'CGI-Application-Plugin-RunmodeDeclare-*' ],
