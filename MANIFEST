@@ -1,9 +1,8 @@
 Build.PL
-CGI-Application-Plugin-RunmodeDeclare-0.03_02.tar.gz
 Changes
 lib/CGI/Application/Plugin/RunmodeDeclare.pm
 Makefile.PL
-MANIFEST
+MANIFEST			This list of files
 META.yml
 README
 t/00-load.t

@@ -3,7 +3,7 @@ package CGI::Application::Plugin::RunmodeDeclare;
 use warnings;
 use strict;
 
-our $VERSION = '0.03_02';
+our $VERSION = '0.03_03';
 
 use base 'Devel::Declare::MethodInstaller::Simple';
 use Carp qw(croak);
@@ -44,7 +44,7 @@ sub import {
 my %REGISTRY;
 # per-macro setup
 sub _split {
-    my $n = shift; my ($p,$l) = $n =~ /(\w*)::(\w*)/; return ($p, $l);
+    my $n = shift; my ($p,$l) = $n =~ /^(.*?)(?:::(\w*))?$/; return ($p, $l);
 }
 sub _setup_runmode {
     my ($fullname, $code) = @_;
@@ -158,7 +158,7 @@ CGI::Application::Plugin::RunmodeDeclare - Declare runmodes with keywords
 
 =head1 VERSION
 
-Version 0.03_02
+Version 0.03_03
 
 =head1 SYNOPSIS
 
