@@ -1,13 +1,16 @@
 Build.PL
+CGI-Application-Plugin-RunmodeDeclare-0.03_02.tar.gz
 Changes
 lib/CGI/Application/Plugin/RunmodeDeclare.pm
+Makefile.PL
 MANIFEST
 META.yml
 README
 t/00-load.t
 t/01-use.t
+t/02-subclass.t
 t/boilerplate.t
 t/lib/MyApp1.pm
+t/lib/MyApp2.pm
 t/pod-coverage.t
 t/pod.t
-Makefile.PL
