@@ -1,6 +1,6 @@
 ---
 name: CGI-Application-Plugin-RunmodeDeclare
-version: 0.03_03
+version: 0.04
 author:
   - 'Rhesa Rozendaal <rhesa@cpan.org>'
 abstract: Declare runmodes with keywords
@@ -9,13 +9,13 @@ resources:
   license: http://dev.perl.org/licenses/
 requires:
   CGI::Application: 4.06
-  Devel::Declare: 0.002002
+  Devel::Declare: 0.003001
 build_requires:
   Test::More: 0
 provides:
   CGI::Application::Plugin::RunmodeDeclare:
     file: lib/CGI/Application/Plugin/RunmodeDeclare.pm
-    version: 0.03_03
+    version: 0.04
 generated_by: Module::Build version 0.280801
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.2.html
