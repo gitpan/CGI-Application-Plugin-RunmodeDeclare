@@ -1,4 +1,6 @@
 package MyApp1;
+our $VERSION = '0.07';
+
 
 BEGIN { $ENV{'CGI_APP_RETURN_ONLY'} = 1 }
 
@@ -20,7 +22,7 @@ startmode begin
     "Go"
 }
 
-runmode other($foo, $bar, %stuff, @more)
+runmode other($foo, $bar, @more)
 {
     return $c->get_current_runmode
 }
