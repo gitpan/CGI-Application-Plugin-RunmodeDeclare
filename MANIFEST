@@ -4,11 +4,13 @@ MANIFEST
 META.yml
 Makefile.PL
 README
+dist.ini
 lib/CGI/Application/Plugin/RunmodeDeclare.pm
 t/00-load.t
 t/01-use.t
 t/02-subclass.t
 t/03-params.t
+t/04-multiline-proto.t
 t/boilerplate.t
 t/lib/MyApp1.pm
 t/lib/MyApp2.pm

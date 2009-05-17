@@ -1,5 +1,5 @@
 package CGI::Application::Plugin::RunmodeDeclare;
-our $VERSION = '0.07';
+our $VERSION = '0.08';
 
 
 use warnings;
@@ -11,7 +11,7 @@ CGI::Application::Plugin::RunmodeDeclare - Declare runmodes with keywords
 
 =head1 VERSION
 
-version 0.07
+version 0.08
 
 =cut
 
@@ -122,11 +122,13 @@ sub parse_proto {
     my $self = shift;
     my ($proto) = @_;
     $proto ||= '';
+    $proto =~ s/[\r\n]/ /sg;
+    $proto =~ s/^\s+//; $proto =~ s/\s+$//;
 
     my $invocant = $self->{invocant};
     $invocant = $1 if $proto =~ s{^(\$\w+):\s*}{};
 
-    my @args = 
+    my @args =
         map { m{^ ([\$@%])(\w+) }x ? [$1, $2] : () }
         split /\s*,\s*/,
         $proto

@@ -1,11 +1,13 @@
---- 
+---
 abstract: Declare cgiapp runmodes with keywords
-author: 
-  - Rhesa Rozendaal <rhesa@cpan.org>
-generated_by: Dist::Zilla::Plugin::MetaYaml version 1.003
+author:
+- Rhesa Rozendaal <rhesa@cpan.org>
+generated_by: Dist::Zilla::Plugin::MetaYaml version 1.091260
 license: perl
 name: CGI-Application-Plugin-RunmodeDeclare
-requires: 
-  CGI::Application: 4.06
-  Devel::Declare: 0.003001
-version: 0.07
+requires:
+  CGI::Application: '4.06'
+  Devel::Declare: '0.003001'
+resources:
+  repository: http://github.com/rhesa/cgi-application-plugin-runmodedeclare/tree
+version: '0.08'
