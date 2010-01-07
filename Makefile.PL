@@ -9,7 +9,7 @@ WriteMakefile(
   NAME      => 'CGI::Application::Plugin::RunmodeDeclare',
   AUTHOR    => 'Rhesa\ Rozendaal\ \<rhesa\@cpan\.org\>',
   ABSTRACT  => 'Declare cgiapp runmodes with keywords',
-  VERSION   => '0.08',
+  VERSION   => '0.09',
   EXE_FILES => [ qw() ],
   (eval { ExtUtils::MakeMaker->VERSION(6.21) } ? (LICENSE => 'perl') : ()),
   PREREQ_PM    => {

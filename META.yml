@@ -9,5 +9,5 @@ requires:
   CGI::Application: '4.06'
   Devel::Declare: '0.003001'
 resources:
-  repository: http://github.com/rhesa/cgi-application-plugin-runmodedeclare/tree
-version: '0.08'
+  repository: http://github.com/rhesa/cgi-application-plugin-runmodedeclare
+version: '0.09'

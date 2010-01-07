@@ -1,5 +1,5 @@
 package MyParamApp;
-our $VERSION = '0.08';
+our $VERSION = '0.09';
 
 
 use base qw/MyApp1/;

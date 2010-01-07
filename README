@@ -1,11 +1,11 @@
 
 
 This archive contains the distribution CGI-Application-Plugin-RunmodeDeclare, version
-0.08:
+0.09:
 
   Declare cgiapp runmodes with keywords
 
-This software is copyright (c) 2009 by Rhesa Rozendaal.
+This software is copyright (c) 2010 by Rhesa Rozendaal.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as perl itself.

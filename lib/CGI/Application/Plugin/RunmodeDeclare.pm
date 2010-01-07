@@ -1,5 +1,5 @@
 package CGI::Application::Plugin::RunmodeDeclare;
-our $VERSION = '0.08';
+our $VERSION = '0.09';
 
 
 use warnings;
@@ -11,7 +11,7 @@ CGI::Application::Plugin::RunmodeDeclare - Declare runmodes with keywords
 
 =head1 VERSION
 
-version 0.08
+version 0.09
 
 =cut
 
