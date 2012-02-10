@@ -17,3 +17,5 @@ t/lib/MyApp2.pm
 t/lib/MyParamApp.pm
 t/pod-coverage.t
 t/pod.t
+t/release-pod-coverage.t
+t/release-pod-syntax.t

@@ -1,6 +1,4 @@
 package MyApp2;
-our $VERSION = '0.09';
-
 
 use MyApp1;
 use base qw/MyApp1/;

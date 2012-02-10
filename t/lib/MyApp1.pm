@@ -1,6 +1,4 @@
 package MyApp1;
-our $VERSION = '0.09';
-
 
 BEGIN { $ENV{'CGI_APP_RETURN_ONLY'} = 1 }
 

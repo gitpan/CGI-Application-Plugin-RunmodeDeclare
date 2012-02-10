@@ -1,6 +1,7 @@
 package CGI::Application::Plugin::RunmodeDeclare;
-our $VERSION = '0.09';
-
+{
+  $CGI::Application::Plugin::RunmodeDeclare::VERSION = '0.10';
+}
 
 use warnings;
 use strict;
@@ -11,7 +12,7 @@ CGI::Application::Plugin::RunmodeDeclare - Declare runmodes with keywords
 
 =head1 VERSION
 
-version 0.09
+version 0.10
 
 =cut
 
@@ -154,13 +155,13 @@ sub inject_parsed_proto {
         my ($sigil, $name) = @$sig;
         push @code, _default_for($sigil,$name,$invocant) if $sigil eq '$'; # CA->param only handles scalars
         push @code, _default_for($sigil,$name,"${invocant}->query");
+        push @code, _php_style_default_for($sigil,"${name}","${invocant}->query") if $sigil eq '@'; # support PHP-style foo[] params
     }
 
     return join ' ', @code;
 }
 
-sub _default_for
-{
+sub _default_for {
     my $sigil = shift;
     my $name = shift;
     my $invocant = shift;
@@ -171,6 +172,19 @@ sub _default_for
         . " ${sigil}${name}; ";
 
 }
+
+sub _php_style_default_for {
+    my $sigil = shift;
+    my $name = shift;
+    my $invocant = shift;
+
+    my $varname = $name . '[]';
+    return
+          "${sigil}${name} = ${invocant}->param('${name}[]') unless "
+        . " ${sigil}${name}; ";
+
+}
+
 
 1; # End of CGI::Application::Plugin::RunmodeDeclare
 
